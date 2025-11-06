@@ -1,0 +1,44 @@
+// ============================
+// PERMISSION MIDDLEWARE (versi JWT fix)
+// ============================
+
+const jwt = require("jsonwebtoken");
+
+// Middleware autentikasi token JWT
+exports.authenticateToken = (req, res, next) => {
+  try {
+    const authHeader = req.headers["authorization"] || req.headers["Authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ message: "Token tidak ditemukan. Harap login terlebih dahulu." });
+    }
+
+    const secret = "INI_ADALAH_KUNCI_RAHASIA_YANG_SANGAT_AMAN";
+    const payload = jwt.verify(token, secret);
+
+    req.user = payload; // simpan data user dari token ke req.user
+    next();
+  } catch (err) {
+    console.error("Error verifikasi token:", err.message);
+    return res.status(401).json({ message: "Token tidak valid atau sudah kadaluarsa." });
+  }
+};
+
+// Middleware untuk memastikan role user adalah admin
+exports.isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    console.log(`Izin diberikan: ${req.user.nama} adalah admin`);
+    next();
+  } else {
+    console.warn("Akses ditolak: pengguna bukan admin");
+    return res.status(403).json({ message: "Akses ditolak: hanya untuk admin." });
+  }
+};
+
+// Middleware dummy lama (biar gak rusak kalau masih ada yang import)
+exports.addUserData = (req, res, next) => {
+  console.log("⚠️ addUserData (dummy) tidak digunakan lagi. Gunakan authenticateToken sebagai gantinya.");
+  req.user = { id: 123, nama: "User Dummy", role: "admin" };
+  next();
+};
