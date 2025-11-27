@@ -6,6 +6,11 @@ function ReportPage() {
   const [reports, setReports] = useState([]);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+
+  // 🔥 FILTER BARU
+  const [filterDate, setFilterDate] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+
   const navigate = useNavigate();
 
   const fetchReports = async () => {
@@ -13,14 +18,25 @@ function ReportPage() {
     if (!token) return navigate("/login");
 
     try {
-      const res = await axios.get(
-        "http://localhost:3001/api/reports/daily",
-        {
-          headers: { 
-            Authorization: `Bearer ${token}` 
-          },
-        }
-      );
+      let url = "http://localhost:3001/api/reports/daily";
+
+      // ======== 🔥 PRIORITAS FILTER ========
+      // 1. Jika filter tanggal → gunakan YYYY-MM-DD
+      if (filterDate) {
+        url += `?tanggalMulai=${filterDate}&tanggalSelesai=${filterDate}`;
+      }
+
+      // 2. Jika filter bulan → gunakan rentang tanggal bulan itu
+      else if (filterMonth) {
+        const [year, month] = filterMonth.split("-");
+        const start = `${year}-${month}-01`;
+        const end = `${year}-${month}-31`;
+        url += `?tanggalMulai=${start}&tanggalSelesai=${end}`;
+      }
+
+      const res = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setReports(res.data.data || []);
       setError(null);
@@ -40,9 +56,52 @@ function ReportPage() {
   return (
     <div className="max-w-6xl mx-auto p-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        Laporan Presensi Harian
+        Laporan Presensi
       </h1>
 
+      {/* ===================== FILTER BARU ===================== */}
+      <div className="mb-6 grid grid-cols-3 gap-4">
+
+        {/* Filter berdasarkan tanggal */}
+        <div>
+          <label className="block mb-1 text-sm font-semibold">Filter Tanggal</label>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => {
+              setFilterDate(e.target.value);
+              setFilterMonth(""); // kosongkan filter bulan
+            }}
+            className="w-full px-3 py-2 border rounded-md"
+          />
+        </div>
+
+        {/* Filter berdasarkan bulan */}
+        <div>
+          <label className="block mb-1 text-sm font-semibold">Filter Bulan</label>
+          <input
+            type="month"
+            value={filterMonth}
+            onChange={(e) => {
+              setFilterMonth(e.target.value);
+              setFilterDate(""); // kosongkan filter tanggal
+            }}
+            className="w-full px-3 py-2 border rounded-md"
+          />
+        </div>
+
+        {/* Tombol Apply */}
+        <div className="flex items-end">
+          <button
+            onClick={fetchReports}
+            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+          >
+            Terapkan Filter
+          </button>
+        </div>
+      </div>
+
+      {/* ===================== SEARCH EMAIL ===================== */}
       <div className="mb-6 flex space-x-2">
         <input
           type="text"
@@ -57,6 +116,7 @@ function ReportPage() {
         <p className="text-red-600 bg-red-100 p-4 rounded-md mb-4">{error}</p>
       )}
 
+      {/* ===================== TABEL ===================== */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -90,10 +150,7 @@ function ReportPage() {
               ))
             ) : (
               <tr>
-                <td
-                  colSpan="3"
-                  className="px-6 py-4 text-center text-gray-500"
-                >
+                <td colSpan="3" className="px-6 py-4 text-center text-gray-500">
                   Tidak ada data ditemukan.
                 </td>
               </tr>
