@@ -1,0 +1,39 @@
+const jwt = require("jsonwebtoken");
+
+// HARUS SAMA DENGAN auth.js
+const JWT_SECRET = "secret123";
+
+exports.authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  console.log("AUTH HEADER:", authHeader); // debug
+
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({
+      message: "Akses ditolak. Token tidak disediakan.",
+    });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, userPayload) => {
+    if (err) {
+      console.error("JWT ERROR:", err.message);
+      return res.status(403).json({
+        message: "Token tidak valid atau kadaluwarsa.",
+      });
+    }
+
+    req.user = userPayload;
+    next();
+  });
+};
+
+exports.isAdmin = (req, res, next) => {
+  if (req.user?.role === "admin") {
+    return next();
+  }
+
+  return res.status(403).json({
+    message: "Akses ditolak. Hanya untuk admin.",
+  });
+};
